@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "777430646611",
+    "project_id": "student-app-3f4c0",
+    "storage_bucket": "student-app-3f4c0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:777430646611:android:287ccc7fca2389eaab2ba6",
+        "android_client_info": {
+          "package_name": "com.example.attendanceapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "777430646611-jipve42kv8guhn0e0nj0u500fa20v512.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDINOjSMYTnmDbzuKDKxZfbRGOfwqWLH9M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "777430646611-jipve42kv8guhn0e0nj0u500fa20v512.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:777430646611:android:a6b8797ed599ea52ab2ba6",
+        "android_client_info": {
+          "package_name": "com.example.studentapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "777430646611-jipve42kv8guhn0e0nj0u500fa20v512.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDINOjSMYTnmDbzuKDKxZfbRGOfwqWLH9M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "777430646611-jipve42kv8guhn0e0nj0u500fa20v512.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
