@@ -9,7 +9,6 @@
 //  model or service like AWS Rekognition. ML Kit confirms PRESENCE of a face.)
 
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';

@@ -1,7 +1,3 @@
-// student_detail_screen.dart
-// Shows full attendance history for a single student.
-// Teacher can see all past records and override any of them.
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/attendance_record_model.dart';
@@ -34,20 +30,29 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
 
   Future<void> _loadHistory() async {
     setState(() => _isLoading = true);
+
     try {
-      _history = await _service.getStudentHistory(widget.registerNumber);
+      final data =
+          await _service.getStudentHistory(widget.registerNumber);
+
+      if (!mounted) return;
+
+      setState(() {
+        _history = data;
+      });
     } catch (e) {
-      print('Error loading history: $e');
+      debugPrint('Error loading history: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  // Calculate attendance percentage for this student
   double get _attendancePercentage {
     if (_history.isEmpty) return 0;
     final present = _history.where((r) => r.isPresent).length;
-    return present / _history.length * 100;
+    return (present / _history.length) * 100;
   }
 
   @override
@@ -57,16 +62,17 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0E17),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        title: Text(
+          widget.studentName,
+          style: const TextStyle(color: Colors.white),
         ),
-        title: Text(widget.studentName,
-            style: const TextStyle(color: Colors.white)),
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF6C63FF)))
+              child: CircularProgressIndicator(
+                color: Color(0xFF6C63FF),
+              ),
+            )
           : RefreshIndicator(
               onRefresh: _loadHistory,
               color: const Color(0xFF6C63FF),
@@ -76,29 +82,31 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Student summary card
                     _buildSummaryCard(),
                     const SizedBox(height: 24),
 
-                    const Text('Attendance History',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Attendance History',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 12),
 
-                    // History list
                     if (_history.isEmpty)
                       const Center(
                         child: Padding(
                           padding: EdgeInsets.all(40),
-                          child: Text('No attendance records yet',
-                              style: TextStyle(color: Colors.white38)),
+                          child: Text(
+                            'No attendance records yet',
+                            style: TextStyle(color: Colors.white38),
+                          ),
                         ),
                       )
                     else
-                      ..._history.map((record) =>
-                          _buildHistoryItem(record)),
+                      ..._history.map(_buildHistoryItem),
                   ],
                 ),
               ),
@@ -106,9 +114,11 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
     );
   }
 
+  /// 🔵 SUMMARY CARD
   Widget _buildSummaryCard() {
     final present = _history.where((r) => r.isPresent).length;
     final percentage = _attendancePercentage;
+
     final color = percentage >= 75
         ? Colors.green
         : percentage >= 50
@@ -120,19 +130,17 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF6C63FF).withOpacity(0.3),
+            const Color(0xFF6C63FF).withValues(alpha: 0.3), // ✅ FIXED
             const Color(0xFF1C1B2E),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: const Color(0xFF6C63FF).withOpacity(0.3)),
+          color: const Color(0xFF6C63FF).withValues(alpha: 0.3), // ✅ FIXED
+        ),
       ),
       child: Row(
         children: [
-          // Circular percentage indicator
           SizedBox(
             width: 80,
             height: 80,
@@ -145,38 +153,50 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(color),
                   strokeWidth: 7,
                 ),
-                Text('${percentage.toInt()}%',
-                    style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16)),
+                Text(
+                  '${percentage.toInt()}%',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 20),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.studentName,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16)),
+                Text(
+                  widget.studentName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(widget.registerNumber,
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 13)),
+
+                Text(
+                  widget.registerNumber,
+                  style: const TextStyle(color: Colors.white38),
+                ),
+
                 const SizedBox(height: 8),
-                Text('$present / ${_history.length} classes attended',
-                    style: const TextStyle(
-                        color: Colors.white60, fontSize: 13)),
-                const SizedBox(height: 4),
+
+                Text(
+                  '$present / ${_history.length} classes attended',
+                  style: const TextStyle(color: Colors.white60),
+                ),
+
+                const SizedBox(height: 6),
+
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15), // ✅ FIXED
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -196,10 +216,12 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
     );
   }
 
+  /// 📊 HISTORY ITEM
   Widget _buildHistoryItem(AttendanceRecord record) {
     final dateStr =
         DateFormat('MMM d, yyyy').format(record.timestamp);
-    final timeStr = DateFormat('hh:mm a').format(record.timestamp);
+    final timeStr =
+        DateFormat('hh:mm a').format(record.timestamp);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -209,60 +231,67 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: record.isPresent
-              ? Colors.green.withOpacity(0.2)
-              : Colors.red.withOpacity(0.2),
+              ? Colors.green.withValues(alpha: 0.2) // ✅ FIXED
+              : Colors.red.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
         children: [
           Icon(
-            record.isPresent ? Icons.check_circle : Icons.cancel,
-            color: record.isPresent ? Colors.green : Colors.red,
-            size: 20,
+            record.isPresent
+                ? Icons.check_circle
+                : Icons.cancel,
+            color: record.isPresent
+                ? Colors.green
+                : Colors.red,
           ),
+
           const SizedBox(width: 12),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(dateStr,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600)),
+                    style: const TextStyle(color: Colors.white)),
                 Text(timeStr,
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12)),
+                    style:
+                        const TextStyle(color: Colors.white38)),
               ],
             ),
           ),
+
           if (record.manualOverride)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.15),
+                color: Colors.orange.withValues(alpha: 0.15), // ✅ FIXED
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Override',
-                  style:
-                      TextStyle(color: Colors.orange, fontSize: 10)),
+              child: const Text(
+                'Override',
+                style: TextStyle(color: Colors.orange),
+              ),
             ),
+
           const SizedBox(width: 8),
+
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: record.isPresent
-                  ? Colors.green.withOpacity(0.15)
-                  : Colors.red.withOpacity(0.15),
+                  ? Colors.green.withValues(alpha: 0.15)
+                  : Colors.red.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               record.isPresent ? 'Present' : 'Absent',
               style: TextStyle(
-                color: record.isPresent ? Colors.green : Colors.red,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
+                color: record.isPresent
+                    ? Colors.green
+                    : Colors.red,
               ),
             ),
           ),

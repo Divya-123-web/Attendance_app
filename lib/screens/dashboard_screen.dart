@@ -16,7 +16,6 @@ import 'package:shimmer/shimmer.dart';
 import '../../models/attendance_record_model.dart';
 import 'student_detail_screen.dart';
 import 'teacher_login_screen.dart';
-
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -494,12 +493,12 @@ class _DashboardScreenState extends State<DashboardScreen>
             Text(timeStr,
                 style: const TextStyle(
                     color: Colors.white24, fontSize: 11)),
-            if (record.manualOverride)
-              const Text('⚙ Manual Override',
-                  style: TextStyle(
-                      color: Colors.orange,
-                      fontSize: 10,
-                      fontStyle: FontStyle.italic)),
+            // if (record.manualOverride)
+            //   const Text('⚙ Manual Override',
+            //       style: TextStyle(
+            //           color: Colors.orange,
+            //           fontSize: 10,
+            //           fontStyle: FontStyle.italic)),
           ],
         ),
         trailing: Row(
@@ -616,7 +615,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6C63FF)),
-            child: const Text('Confirm'),
+            child: const Text('Confirm', style: TextStyle(color: Colors.white),),
           ),
         ],
       ),
@@ -651,7 +650,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green.shade700),
-            child: const Text('Mark Present'),
+            child: const Text('Mark Present', style: TextStyle(color: Colors.white),),
           ),
         ],
       ),

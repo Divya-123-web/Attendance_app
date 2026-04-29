@@ -1,12 +1,11 @@
-// location_screen.dart
-// SCREEN 3: Verifies student's GPS location against classroom geofence.
-// Shows distance from classroom and whether they're inside/outside.
-
 import 'package:attendanceapp/provider/attendance_provider.dart';
+import 'package:attendanceapp/screens/dashboard_screen.dart';
+import 'package:attendanceapp/screens/success_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/location_service.dart';
-import 'success_screen.dart';
+
+// ✅ FIX: use alias to avoid ambiguous import
+import '../services/location_service.dart' as loc;
 
 class LocationScreen extends StatefulWidget {
   const LocationScreen({super.key});
@@ -19,12 +18,11 @@ class _LocationScreenState extends State<LocationScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-  bool _verificationStarted = false;
 
   @override
   void initState() {
     super.initState();
-    // Pulsing animation for the location pin
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
@@ -36,17 +34,16 @@ class _LocationScreenState extends State<LocationScreen>
   }
 
   Future<void> _verifyLocation() async {
-    setState(() => _verificationStarted = true);
 
     final provider = context.read<AttendanceProvider>();
     final locationSuccess = await provider.verifyLocation();
 
-    if (!locationSuccess || !mounted) return;
+    // ✅ FIX: proper bool handling
+    if (locationSuccess != true || !mounted) return;
 
-    // Both face and location verified — mark attendance
     final attendanceSuccess = await provider.markAttendance();
 
-    if (attendanceSuccess && mounted) {
+    if (attendanceSuccess == true && mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const SuccessScreen()),
@@ -82,17 +79,18 @@ class _LocationScreenState extends State<LocationScreen>
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _buildProgressBar(3),
                   const SizedBox(height: 16),
+
                   const Text(
                     'Step 3 of 3 — Location Verification',
                     style: TextStyle(color: Colors.white54, fontSize: 14),
                   ),
+
                   const SizedBox(height: 40),
 
-                  // Animated location icon
+                  // 🔵 Animated icon
                   ScaleTransition(
                     scale: _pulseAnimation,
                     child: Container(
@@ -102,12 +100,15 @@ class _LocationScreenState extends State<LocationScreen>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            const Color(0xFF6C63FF).withOpacity(0.3),
-                            const Color(0xFF6C63FF).withOpacity(0.0),
+                            const Color(0xFF6C63FF)
+                                .withValues(alpha: 0.3), // ✅ FIXED
+                            const Color(0xFF6C63FF)
+                                .withValues(alpha: 0.0),
                           ],
                         ),
                         border: Border.all(
-                          color: const Color(0xFF6C63FF).withOpacity(0.5),
+                          color: const Color(0xFF6C63FF)
+                              .withValues(alpha: 0.5), // ✅ FIXED
                           width: 2,
                         ),
                       ),
@@ -118,6 +119,7 @@ class _LocationScreenState extends State<LocationScreen>
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 32),
 
                   const Text(
@@ -128,9 +130,10 @@ class _LocationScreenState extends State<LocationScreen>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
                   const SizedBox(height: 12),
 
-                  // Classroom boundary info
+                  // 📍 Info card
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -142,34 +145,35 @@ class _LocationScreenState extends State<LocationScreen>
                         _buildInfoRow(
                           Icons.radar,
                           'Geofence Radius',
-                          '${LocationService.geofenceRadiusMeters.toInt()} meters',
+                          '${loc.LocationService.allowedRadius.toInt()} meters',
                         ),
                         const Divider(color: Colors.white12),
                         _buildInfoRow(
                           Icons.place,
                           'Classroom Center',
-                          '${LocationService.classroomLatitude.toStringAsFixed(4)}, '
-                          '${LocationService.classroomLongitude.toStringAsFixed(4)}',
+                          '${loc.LocationService.classroomLat.toStringAsFixed(4)}, '
+                          '${loc.LocationService.classroomLng.toStringAsFixed(4)}',
                         ),
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 24),
 
-                  // Location result (shown after verification)
+                  // 📊 Result
                   if (provider.locationResult != null) ...[
                     _buildLocationResultCard(provider.locationResult!),
                     const SizedBox(height: 16),
                   ],
 
-                  // Error message
+                  // ❌ Error
                   if (provider.errorMessage.isNotEmpty) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.15),
+                        color: Colors.red.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red.shade400),
+                        border: Border.all(color: Colors.red),
                       ),
                       child: Row(
                         children: [
@@ -178,7 +182,7 @@ class _LocationScreenState extends State<LocationScreen>
                           Expanded(
                             child: Text(
                               provider.errorMessage,
-                              style: const TextStyle(color: Colors.red, fontSize: 13),
+                              style: const TextStyle(color: Colors.red),
                             ),
                           ),
                         ],
@@ -189,7 +193,7 @@ class _LocationScreenState extends State<LocationScreen>
 
                   const Spacer(),
 
-                  // Verify button
+                  // 🔘 Button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -197,21 +201,18 @@ class _LocationScreenState extends State<LocationScreen>
                       onPressed: provider.isLoading ? null : _verifyLocation,
                       icon: provider.isLoading
                           ? const SizedBox(
-                              width: 20, height: 20,
+                              width: 20,
+                              height: 20,
                               child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2,
+                                color: Colors.white,
+                                strokeWidth: 2,
                               ),
                             )
                           : const Icon(Icons.my_location),
                       label: Text(
                         provider.isLoading
-                            ? 'Verifying location...'
-                            : _verificationStarted
-                                ? 'Try Again'
-                                : 'Verify My Location',
-                        style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold,
-                        ),
+                            ? 'Verifying...'
+                            : 'Verify My Location',
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6C63FF),
@@ -231,15 +232,16 @@ class _LocationScreenState extends State<LocationScreen>
     );
   }
 
-  // Shows GPS result after location check
-  Widget _buildLocationResultCard(LocationResult result) {
+  /// RESULT CARD
+  Widget _buildLocationResultCard(loc.LocationResult result) {
     final isInside = result.isInsideGeofence;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isInside
-            ? Colors.green.withOpacity(0.15)
-            : Colors.red.withOpacity(0.15),
+            ? Colors.green.withValues(alpha: 0.15)
+            : Colors.red.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isInside ? Colors.green : Colors.red,
@@ -262,12 +264,11 @@ class _LocationScreenState extends State<LocationScreen>
                   style: TextStyle(
                     color: isInside ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
                   ),
                 ),
                 Text(
-                  'Distance: ${result.distanceFromClassroom.toStringAsFixed(1)}m from center',
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  'Distance: ${result.distanceFromClassroom.toStringAsFixed(1)}m',
+                  style: const TextStyle(color: Colors.white54),
                 ),
               ],
             ),
@@ -278,31 +279,28 @@ class _LocationScreenState extends State<LocationScreen>
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFF6C63FF), size: 20),
-          const SizedBox(width: 12),
-          Text(label, style: const TextStyle(color: Colors.white54)),
-          const Spacer(),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        ],
-      ),
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF6C63FF)),
+        const SizedBox(width: 10),
+        Text(label, style: const TextStyle(color: Colors.white54)),
+        const Spacer(),
+        Text(value, style: const TextStyle(color: Colors.white)),
+      ],
     );
   }
 
-  Widget _buildProgressBar(int currentStep) {
+  Widget _buildProgressBar(int step) {
     return Row(
       children: List.generate(3, (index) {
-        final step = index + 1;
-        final isActive = step <= currentStep;
         return Expanded(
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 4),
             height: 6,
             decoration: BoxDecoration(
-              color: isActive ? const Color(0xFF6C63FF) : Colors.white12,
+              color: index < step
+                  ? const Color(0xFF6C63FF)
+                  : Colors.white12,
               borderRadius: BorderRadius.circular(3),
             ),
           ),

@@ -14,9 +14,9 @@ import 'package:attendanceapp/models/student_models.dart';
 
 class EmailService {
   // ⚠️ REPLACE THESE WITH YOUR ACTUAL CREDENTIALS
-  static const String _senderEmail = 'your_gmail@gmail.com';
-  static const String _appPassword = 'your_app_password_here'; // 16-char App Password
-  static const String _teacherEmail = 'teacher@school.edu';
+  static const String _senderEmail = 'ajaicoc655@gmail.com';
+  static const String _appPassword = 'ajai@3118'; // 16-char App Password
+  static const String _teacherEmail = 'divya.jo2004@gmail.com'; // Teacher's email to receive reports
 
   // ─────────────────────────────────────────
   // SEND ATTENDANCE REPORT TO TEACHER
@@ -75,10 +75,6 @@ class EmailService {
           <tr style="background: #fff;">
             <td style="padding: 10px; font-weight: bold; color: #555;">Register No:</td>
             <td style="padding: 10px;">${student.registerNumber}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; font-weight: bold; color: #555;">Email:</td>
-            <td style="padding: 10px;">${student.email}</td>
           </tr>
           <tr style="background: #fff;">
             <td style="padding: 10px; font-weight: bold; color: #555;">Date:</td>

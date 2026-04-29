@@ -6,6 +6,7 @@
 
 import 'dart:io';
 import 'package:attendanceapp/models/student_models.dart';
+import 'package:attendanceapp/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -15,7 +16,7 @@ class FirebaseService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // Collection name in Firestore
-  static const String _studentsCollection = 'students';
+  static const String _usersCollection = 'users';
 
   // ─────────────────────────────────────────
   // 1. SAVE STUDENT REGISTRATION DATA
@@ -25,12 +26,11 @@ class FirebaseService {
     try {
       // Use registerNumber as the document ID (unique per student)
       await _firestore
-    .collection('students')
+    .collection(_usersCollection)
     .doc(student.registerNumber)
     .set({
   'name': student.name,
   'registerNumber': student.registerNumber,
-  'email': student.email,
   'attendanceMarked': false,
 });
       print('✅ Student saved: ${student.name}');
@@ -59,8 +59,8 @@ class FirebaseService {
       final downloadUrl = await uploadTask.ref.getDownloadURL();
 
       // Save the URL back to the student's Firestore document
-      await _firestore
-          .collection(_studentsCollection)
+        await _firestore
+          .collection(_usersCollection)
           .doc(registerNumber)
           .update({'faceImageUrl': downloadUrl});
 
@@ -80,7 +80,7 @@ class FirebaseService {
 Future<void> markAttendance(StudentModel student) async {
   try {
     await _firestore
-        .collection(_studentsCollection)
+      .collection(_usersCollection)
         .doc(student.registerNumber)
         .update({
       'attendanceMarked': true,
@@ -90,8 +90,7 @@ Future<void> markAttendance(StudentModel student) async {
     // Save full student info to attendance_logs for dashboard use
     await _firestore.collection('attendance_logs').add({
       'registerNumber': student.registerNumber,
-      'studentName': student.name,        // ← Name for dashboard display
-      'studentEmail': student.email,      // ← Email for detail screen
+      'studentName': student.name,        // ← Name for dashboard display// ← Email for detail screen
       'timestamp': DateTime.now().toIso8601String(),
       'date': DateTime.now().toIso8601String().split('T')[0],
       'isPresent': true,
@@ -109,8 +108,8 @@ Future<void> markAttendance(StudentModel student) async {
   // ─────────────────────────────────────────
   Future<StudentModel?> getStudent(String registerNumber) async {
     try {
-      final doc = await _firestore
-          .collection(_studentsCollection)
+        final doc = await _firestore
+          .collection(_usersCollection)
           .doc(registerNumber)
           .get();
 
@@ -128,8 +127,8 @@ Future<void> markAttendance(StudentModel student) async {
   // ─────────────────────────────────────────
   Future<List<StudentModel>> getAllStudents() async {
     try {
-      final snapshot = await _firestore
-          .collection(_studentsCollection)
+        final snapshot = await _firestore
+          .collection(_usersCollection)
           .get();
 
       return snapshot.docs
@@ -137,6 +136,73 @@ Future<void> markAttendance(StudentModel student) async {
           .toList();
     } catch (e) {
       throw Exception('Failed to get students: $e');
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // 6. SAVE USER DATA TO USERS COLLECTION
+  // Uploads passport photo to storage and saves user data
+  // ─────────────────────────────────────────
+  Future<String> saveUser(UserModel user, File? imageFile) async {
+    try {
+      String photoUrl = user.passportSizePhoto; // Default to existing URL
+
+      // If image file provided, upload to storage
+      if (imageFile != null && await imageFile.exists()) {
+        try {
+          // Validate image file is not empty
+          final fileSize = await imageFile.length();
+          if (fileSize == 0) {
+            print('⚠️ Image file is empty, skipping upload');
+          } else {
+            final storageRef = _storage
+                .ref()
+                .child('passport_photos')
+                .child('${user.registerNumber}.jpg');
+
+            final uploadTask = await storageRef.putFile(imageFile);
+            photoUrl = await uploadTask.ref.getDownloadURL();
+            print('✅ Image uploaded: $photoUrl');
+          }
+        } catch (imageError) {
+          print('⚠️ Image upload failed: $imageError');
+          // Continue without image - don't fail entire user save
+        }
+      }
+
+      // Update user with photo URL
+      final userWithPhoto = user.copyWith(passportSizePhoto: photoUrl);
+
+      // Save to users collection using register number as document ID
+      await _firestore
+          .collection('users')
+          .doc(user.registerNumber.toString())
+          .set(userWithPhoto.toMap());
+
+      print('✅ User saved: ${user.name}');
+      return user.registerNumber.toString();
+    } catch (e) {
+      throw Exception('Failed to save user: $e');
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // 7. GET USER BY REGISTER NUMBER
+  // Used to retrieve user data from users collection
+  // ─────────────────────────────────────────
+  Future<UserModel?> getUser(String registerNumber) async {
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(registerNumber)
+          .get();
+
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data()!);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get user: $e');
     }
   }
 }

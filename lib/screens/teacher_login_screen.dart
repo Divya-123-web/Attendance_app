@@ -3,6 +3,7 @@
 // Includes a "Create Account" flow for first-time setup.
 
 import 'package:attendanceapp/provider/dashboard_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dashboard_screen.dart';
@@ -20,6 +21,14 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   // Pre-fill with a test account (for demo purposes)
+  //   _emailController.text = 'divya.jo2004@gmail.com';
+  //   _passwordController.text = 'divya31';
+  // }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -29,6 +38,13 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+    var accessDatas = await FirebaseFirestore.instance.collection("access").doc("access_id").get();
+    if (!accessDatas.data()!['teacher'].contains(_emailController.text.trim().toLowerCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unauthorized email. Please use your Teacher email.')),
+      );
+      return;
+    }
 
     final provider = context.read<DashboardProvider>();
     final success = await provider.login(

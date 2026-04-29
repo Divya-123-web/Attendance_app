@@ -1,8 +1,9 @@
 // registration_screen.dart
-// SCREEN 1: Collects Student Name, Register Number, Email
+// SCREEN 1: Collects Student Name, Register Number
 // Validates the form and saves to Firebase Firestore via Provider
 
 import 'package:attendanceapp/provider/attendance_provider.dart';
+import 'package:attendanceapp/services/dashboard_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'face_screen.dart';
@@ -19,13 +20,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   final _nameController = TextEditingController();
   final _regNoController = TextEditingController();
-  final _emailController = TextEditingController();
 
   @override
   void dispose() {
     _nameController.dispose();
     _regNoController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
@@ -33,16 +32,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final provider = context.read<AttendanceProvider>();
+    var students =await DashboardService().getAllStudents();
+      if (students.where((s) => s.registerNumber == _regNoController.text.trim() && s.name.toLowerCase() == _nameController.text.trim().toLowerCase()).isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not found. Please check your register number or contact Teacher.')),
+          );
+        return;
+      }
 
     final success = await provider.registerStudent(
       name: _nameController.text.trim(),
       registerNumber: _regNoController.text.trim(),
-      email: _emailController.text.trim(),
     );
 
     if (!mounted) return;
 
-    if (success) {
+    if (success != null) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -118,26 +123,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           controller: _regNoController,
                           label: "Register Number",
                           icon: Icons.badge,
-                          hint: "21CS001",
+                          hint: "110822250??",
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return "Register number required";
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        _buildTextField(
-                          controller: _emailController,
-                          label: "Email",
-                          icon: Icons.email,
-                          hint: "student@email.com",
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Email required";
                             }
                             return null;
                           },
@@ -171,10 +160,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ),
                       child: provider.isLoading
                           ? const CircularProgressIndicator(
-                              color: Colors.white)
+                              color: Colors.white,
+                            )
                           : const Text(
                               "Continue to Face Registration",
                               style: TextStyle(
+                                color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -227,7 +218,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 4),
             height: 6,
             decoration: BoxDecoration(
-              color: index < step
+              color: index < step 
                   ? const Color(0xFF6C63FF)
                   : Colors.white12,
               borderRadius: BorderRadius.circular(4),

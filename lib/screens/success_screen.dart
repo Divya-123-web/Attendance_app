@@ -70,7 +70,6 @@ class SuccessScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       _detailRow('Register No', student?.registerNumber ?? '—'),
                       const SizedBox(height: 12),
-                      _detailRow('Email', student?.email ?? '—'),
                       const SizedBox(height: 12),
                       _detailRow(
                         'Time',
@@ -164,4 +163,12 @@ class SuccessScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+extension on Object? {
+  String? get name => null;
+  
+  get attendanceTime => null;
+  
+  String? get registerNumber => null;
 }

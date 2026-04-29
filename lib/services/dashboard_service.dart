@@ -51,7 +51,7 @@ class DashboardService {
   // Returns all registered students
   // ─────────────────────────────────────────
   Future<List<StudentModel>> getAllStudents() async {
-    final snapshot = await _firestore.collection('students').get();
+    final snapshot = await _firestore.collection('users').get();
     return snapshot.docs
         .map((doc) => StudentModel.fromMap(doc.data()))
         .toList();
@@ -107,14 +107,7 @@ class DashboardService {
       'manualOverride': true,
     });
 
-    // Also update the student document
-    await _firestore
-        .collection('students')
-        .doc(student.registerNumber)
-        .update({
-      'attendanceMarked': true,
-      'attendanceTime': now.toIso8601String(),
-    });
+    
   }
 
   // ─────────────────────────────────────────

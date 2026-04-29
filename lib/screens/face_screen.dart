@@ -91,9 +91,10 @@ class _FaceScreenState extends State<FaceScreen> {
     if (_capturedImage == null) return;
 
     final provider = context.read<AttendanceProvider>();
-    final success = await provider.verifyFace(_capturedImage!);
+    await provider.verifyFace(_capturedImage!);
 
-    if (success && mounted) {
+    // if (success && mounted) {
+    if(mounted){
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const LocationScreen()),
