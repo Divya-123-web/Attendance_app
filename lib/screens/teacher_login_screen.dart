@@ -28,7 +28,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
   //   _emailController.text = 'divya.jo2004@gmail.com';
   //   _passwordController.text = 'divya31';
   // }
-
   @override
   void dispose() {
     _emailController.dispose();

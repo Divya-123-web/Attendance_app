@@ -37,12 +37,16 @@ class DashboardService {
     return _firestore
         .collection('attendance_logs')
         .where('date', isEqualTo: date)
-        .orderBy('timestamp', descending: false)
+        // No orderBy here — sort in Dart below
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
+          final records = snapshot.docs
               .map((doc) => AttendanceRecord.fromMap(doc.id, doc.data()))
               .toList();
+
+          // Sort by timestamp in Dart (no index needed)
+          records.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          return records;
         });
   }
 
@@ -71,6 +75,29 @@ class DashboardService {
     return snapshot.docs
         .map((doc) => AttendanceRecord.fromMap(doc.id, doc.data()))
         .toList();
+  }
+
+  // ─────────────────────────────────────────
+  // ATTENDANCE RANGE QUERY
+  // Returns all attendance records between two dates inclusive.
+  // Date values are stored as YYYY-MM-DD strings in Firestore.
+  // ─────────────────────────────────────────
+  Future<List<AttendanceRecord>> getAttendanceByRange(
+      String startDate, String endDate) async {
+    final snapshot = await _firestore
+        .collection('attendance_logs')
+        .where('date', isGreaterThanOrEqualTo: startDate)
+        .where('date', isLessThanOrEqualTo: endDate)
+        .orderBy('date')
+        .get();
+
+    return snapshot.docs
+        .map((doc) => AttendanceRecord.fromMap(doc.id, doc.data()))
+        .toList()
+      ..sort((a, b) {
+        final dateCompare = a.date.compareTo(b.date);
+        return dateCompare != 0 ? dateCompare : a.timestamp.compareTo(b.timestamp);
+      });
   }
 
   // ─────────────────────────────────────────

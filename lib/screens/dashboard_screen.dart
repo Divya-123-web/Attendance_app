@@ -9,6 +9,10 @@
 import 'package:attendanceapp/provider/dashboard_provider.dart';
 import 'package:attendanceapp/provider/student_provider.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -103,6 +107,251 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  void _showExportOptions(DashboardProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF14131F),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.today, color: Colors.white),
+                title: const Text('Export Day', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Download attendance for selected date', style: TextStyle(color: Colors.white60)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _exportRangeReport(provider, provider.selectedDate, provider.selectedDate, 'Day');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.view_week, color: Colors.white),
+                title: const Text('Export Week', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Download attendance for 7 days', style: TextStyle(color: Colors.white60)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  final selected = DateTime.parse(provider.selectedDate);
+                  final start = selected.subtract(const Duration(days: 6));
+                  _exportRangeReport(provider, _formatDate(start), provider.selectedDate, 'Week');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.date_range, color: Colors.white),
+                title: const Text('Export Month', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Download attendance for the current month', style: TextStyle(color: Colors.white60)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  final selected = DateTime.parse(provider.selectedDate);
+                  final start = DateTime(selected.year, selected.month, 1);
+                  final end = DateTime(selected.year, selected.month + 1, 0);
+                  _exportRangeReport(provider, _formatDate(start), _formatDate(end), 'Month');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.person, color: Colors.white),
+                title: const Text('Export Single Student', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Download attendance history for one student', style: TextStyle(color: Colors.white60)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showStudentExportDialog(provider);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _exportRangeReport(
+      DashboardProvider provider,
+      String startDate,
+      String endDate,
+      String label) async {
+    try {
+      final records = await provider.getAttendanceInRange(startDate, endDate);
+      if (records.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No records found for $label.')),
+        );
+        return;
+      }
+      final csvLines = _buildCsvForRange(records, provider.allStudents, startDate, endDate);
+      final fileName = 'attendance_${label.toLowerCase()}_${startDate}_to_${endDate}.csv';
+      final filePath = await _saveCsv(fileName, csvLines);
+      if (!mounted) return;
+      await _shareCsv(filePath, '$label attendance export');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _showStudentExportDialog(DashboardProvider provider) async {
+    final controller = TextEditingController();
+    final success = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1C1B2E),
+          title: const Text('Export Student', style: TextStyle(color: Colors.white)),
+          content: TextField(
+            controller: controller,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'Register Number',
+              hintStyle: TextStyle(color: Colors.white38),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6C63FF)),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Export'),
+            ),
+          ],
+        );
+      },
+    );
+    if (success == true && controller.text.trim().isNotEmpty) {
+      await _exportStudentReport(provider, controller.text.trim());
+    }
+  }
+
+  Future<void> _exportStudentReport(
+      DashboardProvider provider, String registerNumber) async {
+    try {
+      final history = await provider.getStudentAttendanceHistory(registerNumber);
+      if (history.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No attendance history found for $registerNumber.')),
+        );
+        return;
+      }
+      final csvLines = <String>['Date,Status,Register No,Name,Email,Time,Method'];
+      for (final record in history) {
+        final time = DateFormat('hh:mm a').format(record.timestamp);
+        final method = record.manualOverride ? 'Manual' : 'Auto';
+        csvLines.add(
+          '${record.date},${record.isPresent ? 'Present' : 'Absent'},${record.registerNumber},${_escapeCsv(record.studentName)},${_escapeCsv(record.studentEmail)},$time,$method',
+        );
+      }
+      final fileName = 'student_${registerNumber}_${DateTime.now().toIso8601String()}.csv';
+      final filePath = await _saveCsv(fileName, csvLines);
+      if (!mounted) return;
+      await _shareCsv(filePath, 'Student attendance export for $registerNumber');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Student export failed: $e')),
+      );
+    }
+  }
+
+  List<String> _buildCsvForRange(
+      List<AttendanceRecord> records,
+      List<StudentModel> allStudents,
+      String startDate,
+      String endDate) {
+    final csvLines = <String>['Date,Status,Register No,Name,Email,Time,Method'];
+    final start = DateTime.parse(startDate);
+    final end = DateTime.parse(endDate);
+    final byDate = <String, List<AttendanceRecord>>{};
+    for (final record in records) {
+      byDate.putIfAbsent(record.date, () => []).add(record);
+    }
+    for (var date = start; !date.isAfter(end); date = date.add(const Duration(days: 1))) {
+      final key = DateFormat('yyyy-MM-dd').format(date);
+      final todays = byDate[key] ?? [];
+      final presentRegNos = todays.where((r) => r.isPresent).map((r) => r.registerNumber).toSet();
+      for (final record in todays) {
+        final time = DateFormat('hh:mm a').format(record.timestamp);
+        final method = record.manualOverride ? 'Manual' : 'Auto';
+        csvLines.add(
+          '$key,Present,${record.registerNumber},${_escapeCsv(record.studentName)},${_escapeCsv(record.studentEmail)},$time,$method',
+        );
+      }
+      final absentStudents = allStudents.where((s) => !presentRegNos.contains(s.registerNumber));
+      for (final student in absentStudents) {
+        csvLines.add(
+          '$key,Absent,${student.registerNumber},${_escapeCsv(student.name)},${_escapeCsv(student.email)},,',
+        );
+      }
+    }
+    return csvLines;
+  }
+
+  Future<String> _saveCsv(String fileName, List<String> lines) async {
+    final directory = await _getDownloadDirectory();
+    final file = File('${directory.path}/$fileName');
+    await file.writeAsString(lines.join('\n'));
+    return file.path;
+  }
+
+  Future<void> _shareCsv(String filePath, String subject) async {
+    final file = XFile(filePath);
+    await Share.shareXFiles(
+      [file],
+      text: subject,
+      subject: subject,
+    );
+  }
+
+  Future<Directory> _getDownloadDirectory() async {
+    if (Platform.isAndroid) {
+      try {
+        final storageStatus = await Permission.storage.request();
+        if (storageStatus.isGranted) {
+          final directories = await getExternalStorageDirectories(type: StorageDirectory.downloads);
+          if (directories != null && directories.isNotEmpty) {
+            final downloads = directories.first;
+            if (!await downloads.exists()) {
+              await downloads.create(recursive: true);
+            }
+            return downloads;
+          }
+        }
+      } catch (_) {
+        // Continue to fallback directories if public downloads access fails.
+      }
+
+      final externalDir = await getExternalStorageDirectory();
+      if (externalDir != null) {
+        final downloadPath = Directory('${externalDir.path}/Download');
+        if (!await downloadPath.exists()) {
+          await downloadPath.create(recursive: true);
+        }
+        return downloadPath;
+      }
+    }
+
+    return await getApplicationDocumentsDirectory();
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+
+  String _escapeCsv(String value) {
+    final escaped = value.replaceAll('"', '""');
+    if (escaped.contains(',') || escaped.contains('"') || escaped.contains('\n')) {
+      return '"$escaped"';
+    }
+    return escaped;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<DashboardProvider>(
@@ -130,6 +379,11 @@ class _DashboardScreenState extends State<DashboardScreen>
               ],
             ),
             actions: [
+              IconButton(
+                onPressed: () => _showExportOptions(provider),
+                icon: const Icon(Icons.download, color: Color(0xFF6C63FF)),
+                tooltip: 'Download attendance list',
+              ),
               // Date picker button
               IconButton(
                 onPressed: _pickDate,

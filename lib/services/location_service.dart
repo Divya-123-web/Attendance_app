@@ -53,9 +53,9 @@ class LocationResult {
 class LocationService {
 
   // Change these to your actual classroom coordinates
-  static const double classroomLatitude  = 12.9828082; // 13.0827;
-  static const double classroomLongitude = 80.213865; //80.2707;
-  static const double geofenceRadiusMeters = 2000.0;
+  static const double classroomLatitude  = 13.1353433; // 13.0827;
+  static const double classroomLongitude = 80.0444983; //80.2707;
+  static const double geofenceRadiusMeters = 200;
 
   // ─── 1. PERMISSION ───────────────────────
   /// Call this once before any location work.

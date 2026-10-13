@@ -189,6 +189,16 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
+  Future<List<AttendanceRecord>> getAttendanceInRange(
+      String startDate, String endDate) async {
+    return await _dashboardService.getAttendanceByRange(startDate, endDate);
+  }
+
+  Future<List<AttendanceRecord>> getStudentAttendanceHistory(
+      String registerNumber) async {
+    return await _dashboardService.getStudentHistory(registerNumber);
+  }
+
   // Search and filter
   void setSearchQuery(String query) {
     _searchQuery = query;
